@@ -1,10 +1,7 @@
 package main
 
 import (
-	"bytes"
-	"context"
 	"encoding/json"
-	"golang.org/x/sys/unix"
 	"regexp"
 	"strings"
 )
@@ -255,15 +252,6 @@ func (ps *PSUtils) PlatformInformation() (platform string, family string, versio
 	}
 
 	return platform, family, version, nil
-}
-
-func KernelVersionWithContext(ctx context.Context) (version string, err error) {
-	var utsname unix.Utsname
-	err = unix.Uname(&utsname)
-	if err != nil {
-		return "", err
-	}
-	return string(utsname.Release[:bytes.IndexByte(utsname.Release[:], 0)]), nil
 }
 
 func getSlackwareVersion(contents []string) string {
