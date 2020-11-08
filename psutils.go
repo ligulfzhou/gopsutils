@@ -4,14 +4,13 @@ import (
 	"fmt"
 	"golang.org/x/crypto/ssh"
 	"io/ioutil"
-	"net"
 	"time"
 )
 
 type PSUtils struct {
-	user, password,host, key string
-	port int
-	cipherList []string
+	user, password, host, key string
+	port                      int
+	cipherList                []string
 
 	platform string
 
@@ -73,13 +72,11 @@ func (ps *PSUtils) Connect() (bool, error) {
 	}
 
 	clientConfig = &ssh.ClientConfig{
-		User:    ps.user,
-		Auth:    auth,
-		Timeout: 30 * time.Second,
-		Config:  config,
-		HostKeyCallback: func(hostname string, remote net.Addr, key ssh.PublicKey) error {
-			return nil
-		},
+		User:            ps.user,
+		Auth:            auth,
+		Timeout:         30 * time.Second,
+		Config:          config,
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
 
 	addr = fmt.Sprintf("%s:%d", ps.host, ps.port)
@@ -91,7 +88,5 @@ func (ps *PSUtils) Connect() (bool, error) {
 }
 
 func (ps *PSUtils) checkConn() {
-	select {
-
-	}
+	select {}
 }

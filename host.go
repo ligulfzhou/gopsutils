@@ -1,13 +1,15 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
+	"golang.org/x/sys/unix"
+	"regexp"
 	"strings"
 )
 
-type InfoStat struct {
+type HostInfoStat struct {
 	Hostname             string `json:"hostname"`
 	Uptime               uint64 `json:"uptime"`
 	BootTime             uint64 `json:"bootTime"`
@@ -49,7 +51,7 @@ type TemperatureStat struct {
 	Critical    float64 `json:"sensorCritical"`
 }
 
-func (h InfoStat) String() string {
+func (h HostInfoStat) String() string {
 	s, _ := json.Marshal(h)
 	return string(s)
 }
@@ -126,10 +128,189 @@ func (ps PSUtils) getlsbStruct() (*lsbStruct, error) {
 	return ret, nil
 }
 
-func (ps PSUtils) PlatformInformationWithContext(ctx context.Context) (platform string, family string, version string, err error) {
+func (ps *PSUtils) PlatformInformation() (platform string, family string, version string, err error) {
 	// var err error
 	lsb, err := ps.getlsbStruct()
-	fmt.Println(lsb)
+	if err != nil {
+		lsb = &lsbStruct{}
+	}
 
-	return "", "", "", nil
+	if ps.FileExists("/etc/oracle-release") {
+		platform = "oracle"
+		contents, err := ps.ReadLines("/etc/oracle-release")
+		if err == nil {
+			version = getRedhatishVersion(contents)
+		}
+	} else if ps.FileExists("/etc/enterprise-release") {
+		platform = "oracle"
+		contents, err := ps.ReadLines("/etc/enterprise-release")
+		if err == nil {
+			version = getRedhatishVersion(contents)
+		}
+	} else if ps.FileExists("/etc/slackware-version") {
+		platform = "slackware"
+		contents, err := ps.ReadLines("/etc/slackware-version")
+		if err == nil {
+			version = getSlackwareVersion(contents)
+		}
+	} else if ps.FileExists("/etc/debian_version") {
+		if lsb.ID == "Ubuntu" {
+			platform = "ubuntu"
+			version = lsb.Release
+		} else if lsb.ID == "LinuxMint" {
+			platform = "linuxmint"
+			version = lsb.Release
+		} else {
+			if ps.FileExists("/usr/bin/raspi-config") {
+				platform = "raspbian"
+			} else {
+				platform = "debian"
+			}
+			contents, err := ps.ReadLines("/etc/debian_version")
+			if err == nil && len(contents) > 0 && contents[0] != "" {
+				version = contents[0]
+			}
+		}
+	} else if ps.FileExists("/etc/redhat-release") {
+		contents, err := ps.ReadLines("/etc/redhat-release")
+		if err == nil {
+			version = getRedhatishVersion(contents)
+			platform = getRedhatishPlatform(contents)
+		}
+	} else if ps.FileExists("/etc/system-release") {
+		contents, err := ps.ReadLines("/etc/system-release")
+		if err == nil {
+			version = getRedhatishVersion(contents)
+			platform = getRedhatishPlatform(contents)
+		}
+	} else if ps.FileExists("/etc/gentoo-release") {
+		platform = "gentoo"
+		contents, err := ps.ReadLines("/etc/gentoo-release")
+		if err == nil {
+			version = getRedhatishVersion(contents)
+		}
+	} else if ps.FileExists("/etc/SuSE-release") {
+		contents, err := ps.ReadLines("/etc/SuSE-release")
+		if err == nil {
+			version = getSuseVersion(contents)
+			platform = getSusePlatform(contents)
+		}
+		// TODO: slackware detecion
+	} else if ps.FileExists("/etc/arch-release") {
+		platform = "arch"
+		version = lsb.Release
+	} else if ps.FileExists("/etc/alpine-release") {
+		platform = "alpine"
+		contents, err := ps.ReadLines("/etc/alpine-release")
+		if err == nil && len(contents) > 0 && contents[0] != "" {
+			version = contents[0]
+		}
+	} else if ps.FileExists("/etc/os-release") {
+		// p, v, err := common.GetOSRelease()
+		p, v, err := ps.GetOSRelease()
+		if err == nil {
+			platform = p
+			version = v
+		}
+	} else if lsb.ID == "RedHat" {
+		platform = "redhat"
+		version = lsb.Release
+	} else if lsb.ID == "Amazon" {
+		platform = "amazon"
+		version = lsb.Release
+	} else if lsb.ID == "ScientificSL" {
+		platform = "scientific"
+		version = lsb.Release
+	} else if lsb.ID == "XenServer" {
+		platform = "xenserver"
+		version = lsb.Release
+	} else if lsb.ID != "" {
+		platform = strings.ToLower(lsb.ID)
+		version = lsb.Release
+	}
+
+	switch platform {
+	case "debian", "ubuntu", "linuxmint", "raspbian":
+		family = "debian"
+	case "fedora":
+		family = "fedora"
+	case "oracle", "centos", "redhat", "scientific", "enterpriseenterprise", "amazon", "xenserver", "cloudlinux", "ibm_powerkvm":
+		family = "rhel"
+	case "suse", "opensuse", "sles":
+		family = "suse"
+	case "gentoo":
+		family = "gentoo"
+	case "slackware":
+		family = "slackware"
+	case "arch":
+		family = "arch"
+	case "exherbo":
+		family = "exherbo"
+	case "alpine":
+		family = "alpine"
+	case "coreos":
+		family = "coreos"
+	case "solus":
+		family = "solus"
+	}
+
+	return platform, family, version, nil
+}
+
+func KernelVersionWithContext(ctx context.Context) (version string, err error) {
+	var utsname unix.Utsname
+	err = unix.Uname(&utsname)
+	if err != nil {
+		return "", err
+	}
+	return string(utsname.Release[:bytes.IndexByte(utsname.Release[:], 0)]), nil
+}
+
+func getSlackwareVersion(contents []string) string {
+	c := strings.ToLower(strings.Join(contents, ""))
+	c = strings.Replace(c, "slackware ", "", 1)
+	return c
+}
+
+func getRedhatishVersion(contents []string) string {
+	c := strings.ToLower(strings.Join(contents, ""))
+
+	if strings.Contains(c, "rawhide") {
+		return "rawhide"
+	}
+	if matches := regexp.MustCompile(`release (\d[\d.]*)`).FindStringSubmatch(c); matches != nil {
+		return matches[1]
+	}
+	return ""
+}
+
+func getRedhatishPlatform(contents []string) string {
+	c := strings.ToLower(strings.Join(contents, ""))
+
+	if strings.Contains(c, "red hat") {
+		return "redhat"
+	}
+	f := strings.Split(c, " ")
+
+	return f[0]
+}
+
+func getSuseVersion(contents []string) string {
+	version := ""
+	for _, line := range contents {
+		if matches := regexp.MustCompile(`VERSION = ([\d.]+)`).FindStringSubmatch(line); matches != nil {
+			version = matches[1]
+		} else if matches := regexp.MustCompile(`PATCHLEVEL = ([\d]+)`).FindStringSubmatch(line); matches != nil {
+			version = version + "." + matches[1]
+		}
+	}
+	return version
+}
+
+func getSusePlatform(contents []string) string {
+	c := strings.ToLower(strings.Join(contents, ""))
+	if strings.Contains(c, "opensuse") {
+		return "opensuse"
+	}
+	return "suse"
 }
