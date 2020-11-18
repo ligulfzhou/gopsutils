@@ -1,2 +1,10 @@
 # gopsutils-ssh
-gopsutils ssh library for mobile
+gopsutils is written for mobile usage.
+
+
+# build this framework for iOS
+```
+cd PSUtils
+
+gomobile bind -target ios -o ../PSUtils.framework
+```
