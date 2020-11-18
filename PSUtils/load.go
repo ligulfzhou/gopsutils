@@ -1,4 +1,4 @@
-package main
+package PSUtils
 
 import (
 	"encoding/json"
@@ -59,9 +59,10 @@ func (ps *PSUtils) ArgLoad() (*AvgStat, error) {
 
 func (ps *PSUtils) MiscLoad() (*MiscStat, error) {
 
+	return nil, nil
 }
 
-func (ps *PSUtils)readLoadAvgFromFile() ([]string, error) {
+func (ps *PSUtils) readLoadAvgFromFile() ([]string, error) {
 	loadavgFilename := "/proc/loadavg"
 	line, err := ps.FileContent(loadavgFilename)
 	if err != nil {
@@ -71,5 +72,3 @@ func (ps *PSUtils)readLoadAvgFromFile() ([]string, error) {
 	values := strings.Fields(line)
 	return values, nil
 }
-
-

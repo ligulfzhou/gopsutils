@@ -1,18 +1,19 @@
-package main
+package PSUtils
 
 import (
 	"bytes"
 	"fmt"
-	"golang.org/x/crypto/ssh"
 	"strings"
+
+	"golang.org/x/crypto/ssh"
 )
 
 // not implemented
-func (ps *PSUtils) SudoExec(cmd string) (string, error) {
+func (ps *PSUtils) SudoExec() (string, error) {
 	return "not implemented", nil
 }
 
-func (ps *PSUtils) Exec(cmd string) (string, error) {
+func (ps *PSUtils) Exec(command string) (string, error) {
 
 	session, err := ps.client.NewSession()
 	if err != nil {
@@ -31,14 +32,14 @@ func (ps *PSUtils) Exec(cmd string) (string, error) {
 
 	var b bytes.Buffer
 	session.Stdout = &b
-	if err := session.Run(cmd); err != nil {
+	if err := session.Run(command); err != nil {
 		return "", err
 	}
 
 	// fmt.Println("\n\n\n---------------exec cmd----------------")
 	// fmt.Printf("exec cmd: %s, res: %s \n", cmd, b.String())
 	// fmt.Println("---------------exec cmd---------------- \n\n\n ")
-	return b.String(), nil
+	return StripString(b.String()), nil
 }
 
 func (ps *PSUtils) FileContent(filename string) (string, error) {
@@ -48,6 +49,20 @@ func (ps *PSUtils) FileContent(filename string) (string, error) {
 	}
 
 	return str, nil
+}
+
+func (ps *PSUtils) Glob(fileReg string) ([]string, error) {
+	c, err := ps.Exec("ls " + fileReg)
+	if err != nil {
+		return nil, err
+	}
+
+	seq := "\r\n"
+	if !strings.Contains(seq, "\r\n") {
+		seq = "\n"
+	}
+	lines := strings.Split(c, seq)
+	return lines, nil
 }
 
 func (ps *PSUtils) ReadLines(filename string) ([]string, error) {
@@ -73,10 +88,11 @@ func (ps *PSUtils) FileExists(filename string) bool {
 	return true
 }
 
-func (ps *PSUtils) GetOSRelease() (platform string, version string, err error) {
+func (ps *PSUtils) GetOSRelease() []string {
+	var platform, version string
 	contents, err := ps.ReadLines("/etc/os-release")
 	if err != nil {
-		return "", "", nil // return empty
+		return []string{"", ""}
 	}
 
 	for _, line := range contents {
@@ -91,7 +107,7 @@ func (ps *PSUtils) GetOSRelease() (platform string, version string, err error) {
 			version = trimQuotes(field[1])
 		}
 	}
-	return platform, version, nil
+	return []string{platform, version}
 }
 
 func trimQuotes(s string) string {

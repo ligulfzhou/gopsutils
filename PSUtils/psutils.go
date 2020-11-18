@@ -1,10 +1,15 @@
-package main
+package PSUtils
 
 import (
 	"fmt"
-	"golang.org/x/crypto/ssh"
 	"io/ioutil"
 	"time"
+
+	"golang.org/x/crypto/ssh"
+)
+
+var (
+	CipherList = []string{"aes128-ctr", "aes192-ctr", "aes256-ctr", "aes128-gcm@openssh.com", "arcfour256", "arcfour128", "aes128-cbc", "3des-cbc", "aes192-cbc", "aes256-cbc"}
 )
 
 type PSUtils struct {
@@ -14,10 +19,16 @@ type PSUtils struct {
 
 	platform string
 
+	// for network
+	NetworkInterface                 string
+	RX_LAST_TMSTAMP, TX_LAST_TMSTAMP int64
+	RX_LAST_TOTAL, TX_LAST_TOTAL     int64
+
 	client *ssh.Client
 }
 
-func NewPSUtils(user, password, host, key string, port int, cipherList []string) *PSUtils {
+//func NewPSUtils(user, password, host, key string, port int, cipherList []string) *PSUtils {
+func NewPSUtils(user, password, host, key string, port int) *PSUtils {
 
 	return &PSUtils{
 		user:       user,
@@ -25,7 +36,7 @@ func NewPSUtils(user, password, host, key string, port int, cipherList []string)
 		host:       host,
 		key:        key,
 		port:       port,
-		cipherList: cipherList,
+		cipherList: CipherList,
 		client:     nil,
 	}
 }
@@ -61,20 +72,15 @@ func (ps *PSUtils) Connect() (bool, error) {
 		auth = append(auth, ssh.PublicKeys(signer))
 	}
 
-	if len(ps.cipherList) == 0 {
-		config = ssh.Config{
-			Ciphers: []string{"aes128-ctr", "aes192-ctr", "aes256-ctr", "aes128-gcm@openssh.com", "arcfour256", "arcfour128", "aes128-cbc", "3des-cbc", "aes192-cbc", "aes256-cbc"},
-		}
-	} else {
-		config = ssh.Config{
-			Ciphers: ps.cipherList,
-		}
+	config = ssh.Config{
+		Ciphers: ps.cipherList,
 	}
 
 	clientConfig = &ssh.ClientConfig{
-		User:            ps.user,
-		Auth:            auth,
-		Timeout:         30 * time.Second,
+		User: ps.user,
+		Auth: auth,
+		// 5 second may be acceptable.
+		Timeout:         5 * time.Second,
 		Config:          config,
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}

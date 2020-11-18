@@ -1,16 +1,17 @@
-package main
+package PSUtils
 
 import (
 	"encoding/json"
+	"fmt"
 	"regexp"
 	"strings"
 )
 
 type HostInfoStat struct {
 	Hostname             string `json:"hostname"`
-	Uptime               uint64 `json:"uptime"`
-	BootTime             uint64 `json:"bootTime"`
-	Procs                uint64 `json:"procs"`           // number of processes
+	Uptime               int64  `json:"uptime"`
+	BootTime             int64  `json:"bootTime"`
+	Procs                int64  `json:"procs"`           // number of processes
 	OS                   string `json:"os"`              // ex: freebsd, linux
 	Platform             string `json:"platform"`        // ex: ubuntu, linuxmint
 	PlatformFamily       string `json:"platformFamily"`  // ex: debian, rhel
@@ -125,8 +126,11 @@ func (ps PSUtils) getlsbStruct() (*lsbStruct, error) {
 	return ret, nil
 }
 
-func (ps *PSUtils) PlatformInformation() (platform string, family string, version string, err error) {
+func (ps *PSUtils) PlatformInformation() error {
+	//func (ps *PSUtils) PlatformInformation() (platform string, family string, version string, err error) {
 	// var err error
+
+	var platform, family, version string
 	lsb, err := ps.getlsbStruct()
 	if err != nil {
 		lsb = &lsbStruct{}
@@ -203,11 +207,10 @@ func (ps *PSUtils) PlatformInformation() (platform string, family string, versio
 			version = contents[0]
 		}
 	} else if ps.FileExists("/etc/os-release") {
-		// p, v, err := common.GetOSRelease()
-		p, v, err := ps.GetOSRelease()
+		pv := ps.GetOSRelease()
 		if err == nil {
-			platform = p
-			version = v
+			platform = pv[0]
+			version = pv[1]
 		}
 	} else if lsb.ID == "RedHat" {
 		platform = "redhat"
@@ -251,7 +254,9 @@ func (ps *PSUtils) PlatformInformation() (platform string, family string, versio
 		family = "solus"
 	}
 
-	return platform, family, version, nil
+	//return platform, family, version, nil
+	fmt.Println(platform, family, version, err)
+	return nil
 }
 
 func getSlackwareVersion(contents []string) string {

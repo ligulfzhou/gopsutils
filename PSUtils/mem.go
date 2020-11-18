@@ -1,4 +1,4 @@
-package main
+package PSUtils
 
 import (
 	"encoding/json"
@@ -8,17 +8,17 @@ import (
 
 type VirtualMemoryStat struct {
 	// Total amount of RAM on this system
-	Total uint64 `json:"total"`
+	Total int64 `json:"total"`
 
 	// RAM available for programs to allocate
 	//
 	// This value is computed from the kernel specific values.
-	Available uint64 `json:"available"`
+	Available int64 `json:"available"`
 
 	// RAM used by programs
 	//
 	// This value is computed from the kernel specific values.
-	Used uint64 `json:"used"`
+	Used int64 `json:"used"`
 
 	// Percentage of RAM used by programs
 	//
@@ -28,48 +28,48 @@ type VirtualMemoryStat struct {
 	// This is the kernel's notion of free memory; RAM chips whose bits nobody
 	// cares about the value of right now. For a human consumable number,
 	// Available is what you really want.
-	Free uint64 `json:"free"`
+	Free int64 `json:"free"`
 
 	// OS X / BSD specific numbers:
 	// http://www.macyourself.com/2010/02/17/what-is-free-wired-active-and-inactive-system-memory-ram/
-	Active   uint64 `json:"active"`
-	Inactive uint64 `json:"inactive"`
-	Wired    uint64 `json:"wired"`
+	Active   int64 `json:"active"`
+	Inactive int64 `json:"inactive"`
+	Wired    int64 `json:"wired"`
 
 	// FreeBSD specific numbers:
 	// https://reviews.freebsd.org/D8467
-	Laundry uint64 `json:"laundry"`
+	Laundry int64 `json:"laundry"`
 
 	// Linux specific numbers
 	// https://www.centos.org/docs/5/html/5.1/Deployment_Guide/s2-proc-meminfo.html
 	// https://www.kernel.org/doc/Documentation/filesystems/proc.txt
 	// https://www.kernel.org/doc/Documentation/vm/overcommit-accounting
-	Buffers        uint64 `json:"buffers"`
-	Cached         uint64 `json:"cached"`
-	WriteBack      uint64 `json:"writeBack"`
-	Dirty          uint64 `json:"dirty"`
-	WriteBackTmp   uint64 `json:"writeBackTmp"`
-	Shared         uint64 `json:"shared"`
-	Slab           uint64 `json:"slab"`
-	Sreclaimable   uint64 `json:"sreclaimable"`
-	Sunreclaim     uint64 `json:"sunreclaim"`
-	PageTables     uint64 `json:"pageTables"`
-	SwapCached     uint64 `json:"swapCached"`
-	CommitLimit    uint64 `json:"commitLimit"`
-	CommittedAS    uint64 `json:"committedAS"`
-	HighTotal      uint64 `json:"highTotal"`
-	HighFree       uint64 `json:"highFree"`
-	LowTotal       uint64 `json:"lowTotal"`
-	LowFree        uint64 `json:"lowFree"`
-	SwapTotal      uint64 `json:"swapTotal"`
-	SwapFree       uint64 `json:"swapFree"`
-	Mapped         uint64 `json:"mapped"`
-	VmallocTotal   uint64 `json:"vmallocTotal"`
-	VmallocUsed    uint64 `json:"vmallocUsed"`
-	VmallocChunk   uint64 `json:"vmallocChunk"`
-	HugePagesTotal uint64 `json:"hugePagesTotal"`
-	HugePagesFree  uint64 `json:"hugePagesFree"`
-	HugePageSize   uint64 `json:"hugePageSize"`
+	Buffers        int64 `json:"buffers"`
+	Cached         int64 `json:"cached"`
+	WriteBack      int64 `json:"writeBack"`
+	Dirty          int64 `json:"dirty"`
+	WriteBackTmp   int64 `json:"writeBackTmp"`
+	Shared         int64 `json:"shared"`
+	Slab           int64 `json:"slab"`
+	Sreclaimable   int64 `json:"sreclaimable"`
+	Sunreclaim     int64 `json:"sunreclaim"`
+	PageTables     int64 `json:"pageTables"`
+	SwapCached     int64 `json:"swapCached"`
+	CommitLimit    int64 `json:"commitLimit"`
+	CommittedAS    int64 `json:"committedAS"`
+	HighTotal      int64 `json:"highTotal"`
+	HighFree       int64 `json:"highFree"`
+	LowTotal       int64 `json:"lowTotal"`
+	LowFree        int64 `json:"lowFree"`
+	SwapTotal      int64 `json:"swapTotal"`
+	SwapFree       int64 `json:"swapFree"`
+	Mapped         int64 `json:"mapped"`
+	VmallocTotal   int64 `json:"vmallocTotal"`
+	VmallocUsed    int64 `json:"vmallocUsed"`
+	VmallocChunk   int64 `json:"vmallocChunk"`
+	HugePagesTotal int64 `json:"hugePagesTotal"`
+	HugePagesFree  int64 `json:"hugePagesFree"`
+	HugePageSize   int64 `json:"hugePageSize"`
 }
 
 func (m VirtualMemoryStat) String() string {
@@ -77,7 +77,7 @@ func (m VirtualMemoryStat) String() string {
 	return string(s)
 }
 
-func (ps *PSUtils)VirtualMemory() (*VirtualMemoryStat, error) {
+func (ps *PSUtils) VirtualMemory() (*VirtualMemoryStat, error) {
 	filename := "/proc/meminfo"
 	lines, _ := ps.ReadLines(filename)
 
@@ -95,7 +95,7 @@ func (ps *PSUtils)VirtualMemory() (*VirtualMemoryStat, error) {
 		value := strings.TrimSpace(fields[1])
 		value = strings.Replace(value, " kB", "", -1)
 
-		t, err := strconv.ParseUint(value, 10, 64)
+		t, err := strconv.ParseInt(value, 10, 64)
 		if err != nil {
 			return ret, err
 		}
@@ -177,4 +177,3 @@ func (ps *PSUtils)VirtualMemory() (*VirtualMemoryStat, error) {
 
 	return ret, nil
 }
-
