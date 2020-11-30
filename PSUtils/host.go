@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -80,10 +81,11 @@ func (ps *PSUtils) GetHostInfoStat() (*HostInfoStat, error) {
 	if err != nil {
 		fmt.Printf("get platform... failed: %s", err.Error())
 	}
-
 	ret.KernelVersion = ps.GetKernelVersion()
 	ret.KernelArch = ps.GetKernalArch()
-
+	ret.Uptime = ps.GetUptime()
+	ret.Procs = ps.NumProcs()
+	ret.HostID = ps.GetHostID()
 	return ret, nil
 }
 
@@ -378,4 +380,45 @@ func (ps *PSUtils) HostID() string {
 	}
 
 	return ""
+}
+
+func (ps *PSUtils) GetUptime() int64 {
+	// only handle /proc/uptime
+	s, err := ps.Exec("cat /proc/uptime")
+	if err != nil {
+		ts := SplitStringWithDeeperLines(s)
+		if len(ts) > 1 {
+			u, err := strconv.ParseInt(ts[0], 10, 64)
+			if err == nil {
+				return u
+			}
+		}
+	}
+	return 0
+}
+
+func (ps *PSUtils) GetHostName() string {
+	if ps.FileExists("/etc/hostname") {
+		s, err := ps.Exec("cat /etc/hostname")
+		if err != nil {
+			return StripString(s)
+		}
+	}
+
+	s, err := ps.Exec("dmesg | grep 'hostname'")
+	if err == nil && StripString(s) != "" {
+		r, _ := regexp.Compile(`Set hostname to <(?P<hostname>\S*)>\.`)
+		m := r.FindStringSubmatch(s)
+		if len(m) > 0 {
+			return m[len(m)-1]
+		}
+	}
+
+	// ...
+	// may try other ways
+	return ""
+}
+
+func (ps *PSUtils) GetSensorTemperature() {
+	// TODO
 }

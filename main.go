@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"regexp"
 	"time"
 
 	"madan.asia/ligulfzhou/gopsutil-mobile/PSUtils"
@@ -20,12 +21,21 @@ func main() {
 		log.Fatal(err)
 	}
 
+	s, err := psutils.Exec("dmesg | grep 'hostname'")
+	if err == nil && PSUtils.StripString(s) != "" {
+		r, _ := regexp.Compile(`Set hostname to <(?P<hostname>\S*)>\.`)
+		m := r.FindStringSubmatch(s)
+		if len(m) > 0 {
+			fmt.Printf("'%s' \n", m[len(m)-1])
+		}
+	}
+
 	dd, _ := psutils.ListDirectorys("/proc")
 	fmt.Println("======list directory of /proc=====")
 	for _, d := range dd {
 		fmt.Printf("'%s'\n", d)
 	}
-	cnt, _ := psutils.NumProcs()
+	cnt := psutils.NumProcs()
 	fmt.Printf("Number of Procs '%d'", cnt)
 	fmt.Println("=============host=============")
 	fmt.Println(psutils.PlatformInformation())

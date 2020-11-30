@@ -93,12 +93,12 @@ func (ps *PSUtils) ListDirectorys(dir string) ([]string, error) {
 	return names, nil
 }
 
-func (ps *PSUtils) NumProcs() (int64, error) {
+func (ps *PSUtils) NumProcs() int64 {
 	var cnt int64
 
 	names, err := ps.ListDirectorys("/proc")
 	if err != nil {
-		return 0, err
+		return 0
 	}
 
 	for _, v := range names {
@@ -111,7 +111,7 @@ func (ps *PSUtils) NumProcs() (int64, error) {
 		}
 	}
 
-	return cnt, nil
+	return cnt
 }
 
 func (ps *PSUtils) GetVirtualization() (string, string) {
