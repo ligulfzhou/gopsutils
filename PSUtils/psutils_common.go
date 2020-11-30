@@ -3,6 +3,7 @@ package PSUtils
 import (
 	"bytes"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"golang.org/x/crypto/ssh"
@@ -57,11 +58,7 @@ func (ps *PSUtils) Glob(fileReg string) ([]string, error) {
 		return nil, err
 	}
 
-	seq := "\r\n"
-	if !strings.Contains(seq, "\r\n") {
-		seq = "\n"
-	}
-	lines := strings.Split(c, seq)
+	lines := SplitStringToLines(c)
 	return lines, nil
 }
 
@@ -71,16 +68,13 @@ func (ps *PSUtils) ReadLines(filename string) ([]string, error) {
 		return nil, err
 	}
 
-	seq := "\r\n"
-	if !strings.Contains(seq, "\r\n") {
-		seq = "\n"
-	}
-	contents := strings.Split(str, seq)
+	contents := SplitStringToLines(str)
 	return contents, nil
 }
 
 func (ps *PSUtils) FileExists(filename string) bool {
 	_, err := ps.Exec(fmt.Sprintf("stat %s", filename))
+	// _, err := ps.Exec(fmt.Sprintf("ls %s", filename))
 	if err != nil {
 		return false
 	}
@@ -88,33 +82,165 @@ func (ps *PSUtils) FileExists(filename string) bool {
 	return true
 }
 
-func (ps *PSUtils) GetOSRelease() []string {
-	var platform, version string
-	contents, err := ps.ReadLines("/etc/os-release")
+func (ps *PSUtils) ListDirectorys(dir string) ([]string, error) {
+	// c, err := ps.Exec("ls -d / ")
+	c, err := ps.Exec(fmt.Sprintf("ls -d %s/*/", dir))
 	if err != nil {
-		return []string{"", ""}
+		return nil, err
 	}
 
-	for _, line := range contents {
-		field := strings.Split(line, "=")
-		if len(field) < 2 {
-			continue
-		}
-		switch field[0] {
-		case "ID": // use ID for lowercase
-			platform = trimQuotes(field[1])
-		case "VERSION":
-			version = trimQuotes(field[1])
-		}
-	}
-	return []string{platform, version}
+	names := SplitStringWithDeeperLines(c)
+	return names, nil
 }
 
-func trimQuotes(s string) string {
-	if len(s) >= 2 {
-		if s[0] == '"' && s[len(s)-1] == '"' {
-			return s[1 : len(s)-1]
+func (ps *PSUtils) NumProcs() (int64, error) {
+	var cnt int64
+
+	names, err := ps.ListDirectorys("/proc")
+	if err != nil {
+		return 0, err
+	}
+
+	for _, v := range names {
+		if _, err = strconv.ParseInt(v, 10, 64); err == nil {
+			cnt++
 		}
 	}
-	return s
+
+	return cnt, nil
+}
+
+func (ps *PSUtils) Virtualization() (string, string) {
+	var system, role string
+
+	// /proc/xen
+	if ps.FileExists("/proc/xen") {
+		system = "xen"
+		role = "guest"
+		if ps.FileExists("/proc/xen/capabilities") {
+			content, err := ps.FileContent("/proc/xen/capabilities")
+			if err == nil {
+				if strings.Contains(content, "control_id") {
+					role = "host"
+				}
+			}
+		}
+		return system, role
+	}
+
+	if ps.FileExists("/proc/modules") {
+		content, err := ps.FileContent("/proc/cpuinfo")
+		flag := true
+		if err == nil {
+			if strings.Contains(content, "kvm") {
+				system = "kvm"
+				role = "host"
+			} else if strings.Contains(content, "vboxdrv") {
+				system = "vbox"
+				role = "host"
+			} else if strings.Contains(content, "vboxguest") {
+				system = "vbox"
+				role = "guest"
+			} else if strings.Contains(content, "vmware") {
+				system = "vmware"
+				role = "guest"
+			} else {
+				flag = false
+			}
+		}
+		if flag {
+			return system, role
+		}
+	}
+
+	if ps.FileExists("/proc/cpuinfo") {
+		contents, err := ps.FileContent("/proc/cpuinfo")
+		if err == nil {
+			if strings.Contains(contents, "QEMU Virtual CPU") ||
+				strings.Contains(contents, "Common KVM processor") ||
+				strings.Contains(contents, "Common 32-bit KVM processor") {
+				system = "kvm"
+				role = "guest"
+				return system, role
+			}
+		}
+	}
+
+	if ps.FileExists("/proc/bus/pci/devices") {
+		contents, err := ps.FileContent("/proc/bus/pci/devices")
+		if err == nil {
+			if strings.Contains(contents, "virtio-pci") {
+				role = "guest"
+			}
+		}
+	}
+
+	if ps.FileExists("/proc/bc/0") {
+		system = "openvz"
+		role = "host"
+		return system, role
+	} else if ps.fileex("/proc/vz") {
+		system = "openvz"
+		role = "guest"
+		return system, role
+	}
+
+	if ps.FileExists("/proc/self/status") {
+		contents, err := ps.FileContent("/proc/self/status")
+		if err == nil {
+			if strings.Contains(contents, "s_context:") ||
+				strings.Contains(contents, "VxID:") {
+				system = "linux-vserver"
+				return system, role
+			}
+			// TODO: guest or host
+		}
+	}
+
+	if ps.FileExists("/proc/1/environ") {
+		contents, err := ps.FileContent("/proc/1/environ")
+		if err == nil {
+			if strings.Contains(contents, "container=lxc") {
+				system = "lxc"
+				role = "guest"
+				return system, role
+			}
+		}
+	}
+
+	if ps.FileExists("/proc/self/cgroup") {
+		contents, err := ps.FileContent("/proc/self/cgroup")
+		flagCgroup := true
+		if err == nil {
+			if strings.Contains(contents, "lxc") {
+				system = "lxc"
+				role = "guest"
+			} else if strings.Contains(contents, "docker") {
+				system = "docker"
+				role = "guest"
+			} else if strings.Contains(contents, "machine-rkt") {
+				system = "rkt"
+				role = "guest"
+			} else if ps.FileExists("/usr/bin/lxc-version") {
+				system = "lxc"
+				role = "host"
+			} else {
+				flagCgroup = false
+			}
+		}
+		if flagCgroup {
+			return system, role
+		}
+	}
+
+	if ps.FileExists("/etc/os-release") {
+		pv := ps.GetOSRelease()
+		if pv != nil && pv[0] == "coreos" {
+			system = "rkt"
+			role = "host"
+			return system, role
+		}
+	}
+
+	return system, role
 }

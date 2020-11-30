@@ -13,9 +13,9 @@ var (
 )
 
 type PSUtils struct {
-	user, password, host, key string
-	port                      int
-	cipherList                []string
+	user, password, host, keyPath, keyString string
+	port                                     int
+	cipherList                               []string
 
 	platform string
 
@@ -24,17 +24,37 @@ type PSUtils struct {
 	RX_LAST_TMSTAMP, TX_LAST_TMSTAMP int64
 	RX_LAST_TOTAL, TX_LAST_TOTAL     int64
 
+	// disk
+	STORAGE_DEVICE_NAMES  []string
+	PROC_DISKSTAT_TMSTAMP int64
+	LastDiskStat          ProcDiskStats
+	// LastReadsCompletedSuccess       int64
+	// LastReadsMerged                 int64
+	// LastSectorsRead                 int64
+	// LastTimeSpentReadingMS          int64
+	// LastWritesCompleted             int64
+	// LastWritesMerged                int64
+	// LastSectorsWritten              int64
+	// LastTimeSpentWritingMS          int64
+	// LastIOsCurrentlyInProgress      int64
+	// LastTimeSpentDoingIOsMS         int64
+	// LastWeightedTimeSpentDoingIOsMS int64
+
+	// kernel version, useful for calc disk stat
+	KERNEL_VERSION string
+
 	client *ssh.Client
 }
 
 //func NewPSUtils(user, password, host, key string, port int, cipherList []string) *PSUtils {
-func NewPSUtils(user, password, host, key string, port int) *PSUtils {
+func NewPSUtils(user, password, host, keyPath, keyString string, port int) *PSUtils {
 
 	return &PSUtils{
 		user:       user,
 		password:   password,
 		host:       host,
-		key:        key,
+		keyPath:    keyPath,
+		keyString:  keyString,
 		port:       port,
 		cipherList: CipherList,
 		client:     nil,
@@ -52,12 +72,17 @@ func (ps *PSUtils) Connect() (bool, error) {
 	)
 	// get auth method
 	auth = make([]ssh.AuthMethod, 0)
-	if ps.key == "" {
+	if ps.keyPath == "" && ps.keyString == "" {
 		auth = append(auth, ssh.Password(ps.password))
 	} else {
-		pemBytes, err := ioutil.ReadFile(ps.key)
-		if err != nil {
-			return false, err
+		var pemBytes []byte
+		if ps.keyPath != "" {
+			pemBytes, err = ioutil.ReadFile(ps.keyPath)
+			if err != nil {
+				return false, err
+			}
+		} else {
+			pemBytes = []byte(ps.keyString)
 		}
 
 		var signer ssh.Signer
@@ -79,7 +104,7 @@ func (ps *PSUtils) Connect() (bool, error) {
 	clientConfig = &ssh.ClientConfig{
 		User: ps.user,
 		Auth: auth,
-		// 5 second may be acceptable.
+		// 5 second shall be acceptable.
 		Timeout:         5 * time.Second,
 		Config:          config,
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),

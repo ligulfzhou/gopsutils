@@ -64,7 +64,24 @@ func (t TemperatureStat) String() string {
 	return string(s)
 }
 
-func (ps PSUtils) getlsbStruct() (*lsbStruct, error) {
+func (ps *PSUtils) GetHostInfoStat() (*HostInfoStat, error) {
+	var (
+		err error
+	)
+
+	ret := &HostInfoStat{}
+	ret.Platform, ret.PlatformFamily, ret.PlatformVersion, err = ps.PlatformInformation()
+	if err != nil {
+		fmt.Printf("get platform... failed: %s", err.Error())
+	}
+
+	ret.KernelVersion = ps.GetKernelVersion()
+	ret.KernelArch = ps.GetKernalArch()
+
+	return ret, nil
+}
+
+func (ps *PSUtils) getlsbStruct() (*lsbStruct, error) {
 	// var err error
 	ret := &lsbStruct{}
 	if ps.FileExists("/etc/lsb-release") {
@@ -73,11 +90,7 @@ func (ps PSUtils) getlsbStruct() (*lsbStruct, error) {
 			return nil, err
 		}
 
-		seq := "\n"
-		if strings.Contains(str, "\r\n") {
-			seq = "\r\n"
-		}
-		strs := strings.Split(str, seq)
+		strs := SplitStringToLines(str)
 		for _, s := range strs {
 			field := strings.Split(s, "=")
 			if len(field) < 2 {
@@ -100,11 +113,7 @@ func (ps PSUtils) getlsbStruct() (*lsbStruct, error) {
 			return nil, err
 		}
 
-		seq := "\n"
-		if strings.Contains(str, "\r\n") {
-			seq = "\r\n"
-		}
-		strs := strings.Split(str, seq)
+		strs := SplitStringToLines(str)
 		for _, s := range strs {
 			field := strings.Split(s, "=")
 			if len(field) < 2 {
@@ -126,11 +135,7 @@ func (ps PSUtils) getlsbStruct() (*lsbStruct, error) {
 	return ret, nil
 }
 
-func (ps *PSUtils) PlatformInformation() error {
-	//func (ps *PSUtils) PlatformInformation() (platform string, family string, version string, err error) {
-	// var err error
-
-	var platform, family, version string
+func (ps *PSUtils) PlatformInformation() (platform string, family string, version string, err error) {
 	lsb, err := ps.getlsbStruct()
 	if err != nil {
 		lsb = &lsbStruct{}
@@ -254,9 +259,8 @@ func (ps *PSUtils) PlatformInformation() error {
 		family = "solus"
 	}
 
-	//return platform, family, version, nil
 	fmt.Println(platform, family, version, err)
-	return nil
+	return platform, family, version, nil
 }
 
 func getSlackwareVersion(contents []string) string {
@@ -306,4 +310,26 @@ func getSusePlatform(contents []string) string {
 		return "opensuse"
 	}
 	return "suse"
+}
+
+func (ps *PSUtils) GetOSRelease() []string {
+	var platform, version string
+	contents, err := ps.ReadLines("/etc/os-release")
+	if err != nil {
+		return []string{"", ""}
+	}
+
+	for _, line := range contents {
+		field := strings.Split(line, "=")
+		if len(field) < 2 {
+			continue
+		}
+		switch field[0] {
+		case "ID": // use ID for lowercase
+			platform = TrimQuotes(field[1])
+		case "VERSION":
+			version = TrimQuotes(field[1])
+		}
+	}
+	return []string{platform, version}
 }

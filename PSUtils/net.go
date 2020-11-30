@@ -82,7 +82,7 @@ func (ps *PSUtils) GetMainInterface() error {
 		return err
 	}
 
-	lines := SplitString(s)
+	lines := SplitStringToLines(s)
 	for _, line := range lines[1:] {
 		sp := strings.Split(line, "\t")
 		if len(sp) < 11 {
