@@ -7,6 +7,12 @@ import (
 	"strings"
 )
 
+const (
+	SysProductUUID            = "/sys/class/dmi/id/product_uuid"
+	MachineID                 = "/etc/machine-id"
+	ProcSysKernelRandomBootID = "/proc/sys/kernel/random/boot_id"
+)
+
 type HostInfoStat struct {
 	Hostname             string `json:"hostname"`
 	Uptime               int64  `json:"uptime"`
@@ -332,4 +338,44 @@ func (ps *PSUtils) GetOSRelease() []string {
 		}
 	}
 	return []string{platform, version}
+}
+
+func (ps *PSUtils) GetHostID() string {
+	if ps.HostId != "" {
+		return ps.HostId
+	}
+
+	hostId := ps.HostID()
+	ps.HostId = hostId
+	return hostId
+}
+
+func (ps *PSUtils) HostID() string {
+	// In order to read this file, needs to be supported by kernel/arch and run as root
+	// so having fallback is important
+	if ps.FileExists(SysProductUUID) {
+		s, err := ps.Exec(fmt.Sprintf("cat %s", SysProductUUID))
+		if err == nil {
+			return strings.ToLower(StripString(s))
+		}
+	}
+
+	// Fallback on GNU Linux systems with systemd, readable by everyone
+	if ps.FileExists(MachineID) {
+		s, err := ps.Exec(fmt.Sprintf("cat %s", MachineID))
+		if err == nil {
+			hostId := StripString(s)
+			if len(hostId) == 32 {
+				return fmt.Sprintf("%s-%s-%s-%s-%s", hostId[0:8], hostId[8:12], hostId[12:16], hostId[16:20], hostId[20:32])
+			}
+		}
+	}
+
+	// Not stable between reboot, but better than nothing
+	s, err := ps.Exec(fmt.Sprintf("cat %s", ProcSysKernelRandomBootID))
+	if err == nil {
+		return strings.ToLower(StripString(s))
+	}
+
+	return ""
 }

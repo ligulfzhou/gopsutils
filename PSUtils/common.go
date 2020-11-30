@@ -7,7 +7,7 @@ import (
 
 /*
 I think It`s ok to just trim space, ', ", \n
-not as dumb as TrimQuotes function.
+TrimQuotes function only trim " and '
 */
 func StripString(s string) string {
 	s1 := strings.Trim(s, " ")

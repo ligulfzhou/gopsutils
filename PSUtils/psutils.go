@@ -28,17 +28,12 @@ type PSUtils struct {
 	STORAGE_DEVICE_NAMES  []string
 	PROC_DISKSTAT_TMSTAMP int64
 	LastDiskStat          ProcDiskStats
-	// LastReadsCompletedSuccess       int64
-	// LastReadsMerged                 int64
-	// LastSectorsRead                 int64
-	// LastTimeSpentReadingMS          int64
-	// LastWritesCompleted             int64
-	// LastWritesMerged                int64
-	// LastSectorsWritten              int64
-	// LastTimeSpentWritingMS          int64
-	// LastIOsCurrentlyInProgress      int64
-	// LastTimeSpentDoingIOsMS         int64
-	// LastWeightedTimeSpentDoingIOsMS int64
+
+	// virtualization
+	VirtualizationSystem, VirtualizationRole string
+
+	//HostId
+	HostId string
 
 	// kernel version, useful for calc disk stat
 	KERNEL_VERSION string

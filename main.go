@@ -25,6 +25,8 @@ func main() {
 	for _, d := range dd {
 		fmt.Printf("'%s'\n", d)
 	}
+	cnt, _ := psutils.NumProcs()
+	fmt.Printf("Number of Procs '%d'", cnt)
 	fmt.Println("=============host=============")
 	fmt.Println(psutils.PlatformInformation())
 	fmt.Println("=============host=============")

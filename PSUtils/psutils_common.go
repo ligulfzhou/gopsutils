@@ -102,12 +102,27 @@ func (ps *PSUtils) NumProcs() (int64, error) {
 	}
 
 	for _, v := range names {
-		if _, err = strconv.ParseInt(v, 10, 64); err == nil {
+		sp := strings.Split(v, "/")
+		if len(sp) < 4 {
+			continue
+		}
+		if _, err = strconv.ParseInt(sp[2], 10, 64); err == nil {
 			cnt++
 		}
 	}
 
 	return cnt, nil
+}
+
+func (ps *PSUtils) GetVirtualization() (string, string) {
+	if ps.VirtualizationSystem != "" || ps.VirtualizationRole != "" {
+		return ps.VirtualizationSystem, ps.VirtualizationRole
+	}
+
+	system, role := ps.Virtualization()
+	ps.VirtualizationSystem = system
+	ps.VirtualizationRole = role
+	return system, role
 }
 
 func (ps *PSUtils) Virtualization() (string, string) {
@@ -179,7 +194,7 @@ func (ps *PSUtils) Virtualization() (string, string) {
 		system = "openvz"
 		role = "host"
 		return system, role
-	} else if ps.fileex("/proc/vz") {
+	} else if ps.FileExists("/proc/vz") {
 		system = "openvz"
 		role = "guest"
 		return system, role
