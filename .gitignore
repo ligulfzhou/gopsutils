@@ -6,6 +6,7 @@
 *.dylib
 *.DS_Store
 gopsutil-mobile
+main.go
 
 # Test binary, built with `go test -c`
 *.test
