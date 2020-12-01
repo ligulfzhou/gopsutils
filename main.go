@@ -48,7 +48,7 @@ func main() {
 	fmt.Println("=============load=============")
 	fmt.Println("=============cpu count=============")
 	fmt.Println(psutils.CPUCount(true))
-	// fmt.Println(psutils.CPUCount(false))
+	fmt.Println(psutils.CPUCount(false))
 	fmt.Println(psutils.CPUInfo())
 	err = psutils.GetMainInterface()
 	fmt.Println(err)

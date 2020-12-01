@@ -30,8 +30,40 @@ if let client = client {
 }
 ```
 
-host:
+cpu:
+```
+cpu physical count: 
+=> client.CPUCount(false)
+
+cpu logical count: 
+=> client.CPUCount(true)
+
+cpu information:
+=> client.CPUInfo()
+
+cpu time: 
+=> 
 ```
 
+host:
+```
+host information: 
+(Hostname,Uptime,BootTime,Procs,OS,Platform,PlatformFamily,PlatformVersion,KernelVersion,KernelArch,VirtualizationSystem,VirtualizationRole,HostID)  
+=> client.HostInfoStat()
+```
 
+mem:
+```
+```
+
+disk:
+```
+```
+
+load:
+```
+```
+
+net:
+```
 ```
