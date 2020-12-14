@@ -113,6 +113,6 @@ func (ps *PSUtils) Connect() (bool, error) {
 	return true, nil
 }
 
-func (ps *PSUtils) checkConn() {
-	select {}
-}
+// func (ps *PSUtils) checkConn() {
+// 	select {}
+// }

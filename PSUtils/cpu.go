@@ -1,11 +1,15 @@
 package PSUtils
 
 import (
+	"encoding/json"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
 	"sync"
 )
+
+var ()
 
 type CPUTimesStat struct {
 	CPU       string  `json:"cpu"`
@@ -261,4 +265,119 @@ func (ps *PSUtils) finishCPUInfo(c *CPUInfoStat) error {
 
 func sysCPUPath(cpu int32, relPath string) string {
 	return fmt.Sprintf("/sys/devices/system/cpu/cpu%d/%s", cpu, relPath)
+}
+
+func (ps *PSUtils) CpuTimes() {
+
+}
+
+/*
+     user    nice   system  idle      iowait irq   softirq  steal  guest  guest_nice
+cpu  74608   2520   24433   1117073   6176   4054  0        0      0      0
+
+Time units are in USER_HZ(1/100 second)
+
+(user, nice, system, idle, iowait, irq, softirq [steal, [guest, [guest_nice]]])
+Last 3 fields may not be available on all Linux kernel versions.
+*/
+type CpuTimes struct {
+	User      int64
+	Nice      int64
+	System    int64
+	Idle      int64
+	Iowait    int64
+	Irq       int64
+	Softirq   int64
+	Steal     int64
+	Guest     int64
+	GuestNice int64
+}
+
+func (ct CpuTimes) String() string {
+	s, _ := json.Marshal(ct)
+	return string(s)
+}
+
+func (ps *PSUtils) TotalCpuTimes() CpuTimes {
+	var ret CpuTimes
+
+	lines, err := ps.ReadLines("/proc/stat")
+	if err != nil {
+		fmt.Println("readlines", err.Error())
+		return ret
+	}
+
+	if len(lines) > 0 && strings.HasPrefix(lines[0], "cpu") {
+		fmt.Println("lines0", lines[0])
+		ret, err = lineToCpuTimes(lines[0], true)
+		if err != nil {
+			fmt.Println("linetocpu", err.Error())
+			return ret
+		}
+	}
+
+	return ret
+}
+
+func (ps *PSUtils) PerCpuTimes() []CpuTimes {
+	cpus := []CpuTimes{}
+	lines, err := ps.ReadLines("/proc/stat")
+	if err != nil {
+		return cpus
+	}
+
+	for _, line := range lines {
+		ct, err := lineToCpuTimes(line, false)
+		if err != nil {
+			continue
+		}
+		cpus = append(cpus, ct)
+	}
+
+	return cpus
+}
+
+func lineToCpuTimes(line string, total bool) (CpuTimes, error) {
+
+	var ret CpuTimes
+	sp := SplitString(line)
+
+	if len(sp) < 8 {
+		return ret, errors.New("less than 8 part, not related to cpu")
+	} else if total == false && sp[0] != "cpu" && strings.HasPrefix(sp[0], "cpu") {
+		ret = listSpToCpuTimes(sp)
+		return ret, nil
+	} else if total == true && sp[0] == "cpu" {
+		ret = listSpToCpuTimes(sp)
+		return ret, nil
+	} else {
+		return ret, errors.New(" not related to cpu")
+	}
+}
+
+func listSpToCpuTimes(sp []string) CpuTimes {
+	ret := CpuTimes{}
+	if len(sp) >= 8 {
+		ret.User = strToInt64(sp[1], 0)
+		ret.Nice = strToInt64(sp[2], 0)
+		ret.System = strToInt64(sp[3], 0)
+		ret.Idle = strToInt64(sp[4], 0)
+		ret.Iowait = strToInt64(sp[5], 0)
+		ret.Irq = strToInt64(sp[6], 0)
+		ret.Softirq = strToInt64(sp[7], 0)
+	}
+
+	if len(sp) >= 8 {
+		ret.Steal = strToInt64(sp[8], 0)
+	}
+
+	if len(sp) >= 9 {
+		ret.Guest = strToInt64(sp[9], 0)
+	}
+
+	if len(sp) >= 10 {
+		ret.GuestNice = strToInt64(sp[10], 0)
+
+	}
+	return ret
 }

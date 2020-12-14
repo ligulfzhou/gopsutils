@@ -72,6 +72,12 @@ func (ps *PSUtils) ReadLines(filename string) ([]string, error) {
 	return contents, nil
 }
 
+/*
+cpu times:
+
+(user, nice, system, idle, iowait, irq, softirq [steal, [guest, [guest_nice]]])
+Last 3 fields may not be available on all Linux kernel versions.
+*/
 func (ps *PSUtils) FileExists(filename string) bool {
 	_, err := ps.Exec(fmt.Sprintf("stat %s", filename))
 	// _, err := ps.Exec(fmt.Sprintf("ls %s", filename))
@@ -114,18 +120,21 @@ func (ps *PSUtils) NumProcs() int64 {
 	return cnt
 }
 
-func (ps *PSUtils) GetVirtualization() (string, string) {
+// func (ps *PSUtils) GetVirtualization() (string, string) {
+func (ps *PSUtils) GetVirtualization() []string {
 	if ps.VirtualizationSystem != "" || ps.VirtualizationRole != "" {
-		return ps.VirtualizationSystem, ps.VirtualizationRole
+		return []string{ps.VirtualizationSystem, ps.VirtualizationRole}
 	}
 
-	system, role := ps.Virtualization()
-	ps.VirtualizationSystem = system
-	ps.VirtualizationRole = role
-	return system, role
+	systemRole := ps.Virtualization()
+	// if len(systemRole) == 2 {
+	ps.VirtualizationSystem = systemRole[0]
+	ps.VirtualizationRole = systemRole[1]
+	// }
+	return systemRole
 }
 
-func (ps *PSUtils) Virtualization() (string, string) {
+func (ps *PSUtils) Virtualization() []string {
 	var system, role string
 
 	// /proc/xen
@@ -140,7 +149,7 @@ func (ps *PSUtils) Virtualization() (string, string) {
 				}
 			}
 		}
-		return system, role
+		return []string{system, role}
 	}
 
 	if ps.FileExists("/proc/modules") {
@@ -164,7 +173,7 @@ func (ps *PSUtils) Virtualization() (string, string) {
 			}
 		}
 		if flag {
-			return system, role
+			return []string{system, role}
 		}
 	}
 
@@ -176,7 +185,7 @@ func (ps *PSUtils) Virtualization() (string, string) {
 				strings.Contains(contents, "Common 32-bit KVM processor") {
 				system = "kvm"
 				role = "guest"
-				return system, role
+				return []string{system, role}
 			}
 		}
 	}
@@ -193,11 +202,11 @@ func (ps *PSUtils) Virtualization() (string, string) {
 	if ps.FileExists("/proc/bc/0") {
 		system = "openvz"
 		role = "host"
-		return system, role
+		return []string{system, role}
 	} else if ps.FileExists("/proc/vz") {
 		system = "openvz"
 		role = "guest"
-		return system, role
+		return []string{system, role}
 	}
 
 	if ps.FileExists("/proc/self/status") {
@@ -206,7 +215,7 @@ func (ps *PSUtils) Virtualization() (string, string) {
 			if strings.Contains(contents, "s_context:") ||
 				strings.Contains(contents, "VxID:") {
 				system = "linux-vserver"
-				return system, role
+				return []string{system, role}
 			}
 			// TODO: guest or host
 		}
@@ -218,7 +227,7 @@ func (ps *PSUtils) Virtualization() (string, string) {
 			if strings.Contains(contents, "container=lxc") {
 				system = "lxc"
 				role = "guest"
-				return system, role
+				return []string{system, role}
 			}
 		}
 	}
@@ -244,7 +253,7 @@ func (ps *PSUtils) Virtualization() (string, string) {
 			}
 		}
 		if flagCgroup {
-			return system, role
+			return []string{system, role}
 		}
 	}
 
@@ -253,9 +262,9 @@ func (ps *PSUtils) Virtualization() (string, string) {
 		if pv != nil && pv[0] == "coreos" {
 			system = "rkt"
 			role = "host"
-			return system, role
+			return []string{system, role}
 		}
 	}
 
-	return system, role
+	return []string{system, role}
 }

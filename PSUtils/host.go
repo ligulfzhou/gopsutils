@@ -37,6 +37,12 @@ type lsbStruct struct {
 	Description string
 }
 
+type platformInformation struct {
+	Platform string
+	Family   string
+	Version  string
+}
+
 func (lsb *lsbStruct) String() string {
 	s, _ := json.Marshal(lsb)
 	return string(s)
@@ -77,10 +83,14 @@ func (ps *PSUtils) GetHostInfoStat() (*HostInfoStat, error) {
 	)
 
 	ret := &HostInfoStat{}
-	ret.Platform, ret.PlatformFamily, ret.PlatformVersion, err = ps.PlatformInformation()
+	platformInfo, err := ps.PlatformInformation()
 	if err != nil {
 		fmt.Printf("get platform... failed: %s", err.Error())
 	}
+	ret.Platform = platformInfo.Platform
+	ret.PlatformFamily = platformInfo.Family
+	ret.PlatformVersion = platformInfo.Version
+	ret.OS = "Linux"
 	ret.KernelVersion = ps.GetKernelVersion()
 	ret.KernelArch = ps.GetKernalArch()
 	ret.Uptime = ps.GetUptime()
@@ -143,12 +153,13 @@ func (ps *PSUtils) getlsbStruct() (*lsbStruct, error) {
 	return ret, nil
 }
 
-func (ps *PSUtils) PlatformInformation() (platform string, family string, version string, err error) {
+func (ps *PSUtils) PlatformInformation() (platformInformation, error) {
 	lsb, err := ps.getlsbStruct()
 	if err != nil {
 		lsb = &lsbStruct{}
 	}
 
+	var platform, family, version string
 	if ps.FileExists("/etc/oracle-release") {
 		platform = "oracle"
 		contents, err := ps.ReadLines("/etc/oracle-release")
@@ -268,7 +279,11 @@ func (ps *PSUtils) PlatformInformation() (platform string, family string, versio
 	}
 
 	fmt.Println(platform, family, version, err)
-	return platform, family, version, nil
+	return platformInformation{
+		Platform: platform,
+		Family:   family,
+		Version:  version,
+	}, nil
 }
 
 func getSlackwareVersion(contents []string) string {
