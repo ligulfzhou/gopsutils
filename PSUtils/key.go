@@ -23,10 +23,13 @@ type KeyPair struct {
 
 // default keysize: 2048
 // default cipher:  aes-256
-func GenerateRsaSshKeyPair(password string) (*KeyPair, error) {
-	keySize := 2048
+func GenerateRsaSshKeyPair(password string, keySize int) (*KeyPair, error) {
+	size := keySize
+	if keySize != 1024 && keySize != 2048 && keySize != 4096 {
+		size = 2048
+	}
 	cipher := x509.PEMCipherAES256
-	privateKey, err := rsa.GenerateKey(rand.Reader, keySize)
+	privateKey, err := rsa.GenerateKey(rand.Reader, size)
 	if err != nil {
 		return nil, err
 	}
@@ -51,7 +54,7 @@ func GenerateRsaSshKeyPair(password string) (*KeyPair, error) {
 	}
 
 	privateKeyString := string(pem.EncodeToMemory(privateKeyBlock))
-	publicRsaKey, err := ssh.NewPublicKey(privateKey)
+	publicRsaKey, err := ssh.NewPublicKey(privateKey.Public())
 	if err != nil {
 		return nil, err
 	}
