@@ -400,13 +400,15 @@ func (ps *PSUtils) HostID() string {
 func (ps *PSUtils) GetUptime() int64 {
 	// only handle /proc/uptime
 	s, err := ps.Exec("cat /proc/uptime")
-	if err != nil {
+	if err == nil {
 		ts := SplitStringWithDeeperLines(s)
 		if len(ts) > 1 {
-			u, err := strconv.ParseInt(ts[0], 10, 64)
+			f, err := strconv.ParseFloat(ts[0], 64)
 			if err == nil {
-				return u
+				i := int64(f)
+				return i
 			}
+
 		}
 	}
 	return 0

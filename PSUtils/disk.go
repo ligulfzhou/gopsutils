@@ -7,9 +7,9 @@ import (
 )
 
 var (
-	GET_BLOCKS_CMD          = "ls /sys/block"
-	CAT_PROC_DISKSTATS_CMD  = "cat /proc/diskstats"
-	OMIT_DISK_NAME_PREFIXES = []string{"loop", "ram", "sr", "md", "dm-"}
+	GetBlocksCmd         = "ls /sys/block"
+	CatProcDiskstatsCmd  = "cat /proc/diskstats"
+	OmitDiskNamePrefixes = []string{"loop", "ram", "sr", "md", "dm-"}
 )
 
 type DiskOverallStats struct {
@@ -72,8 +72,8 @@ type ProcDiskStats struct {
 func (ps *PSUtils) GetDiskOverallStats() *ProcDiskStats {
 	cur := ps.GetSumProcDiskStats()
 	curTM := time.Now().Unix()
-	if ps.PROC_DISKSTAT_TMSTAMP != 0 {
-		gap := curTM - ps.PROC_DISKSTAT_TMSTAMP
+	if ps.ProcDiskstatTmstamp != 0 {
+		gap := curTM - ps.ProcDiskstatTmstamp
 		if gap > 0 {
 			if ps.LastDiskStat.ReadsCompletedSuccess > 0 {
 				cur.ReadIOPS = (cur.ReadsCompletedSuccess - ps.LastDiskStat.ReadsCompletedSuccess) / gap
@@ -90,7 +90,7 @@ func (ps *PSUtils) GetDiskOverallStats() *ProcDiskStats {
 		}
 	}
 	ps.LastDiskStat = cur
-	ps.PROC_DISKSTAT_TMSTAMP = curTM
+	ps.ProcDiskstatTmstamp = curTM
 
 	return &cur
 }
@@ -125,7 +125,7 @@ func (ps *PSUtils) GetSumProcDiskStats() ProcDiskStats {
 
 func (ps *PSUtils) parseProcDiskStats() []ProcDiskStats {
 	ret := []ProcDiskStats{}
-	s, err := ps.Exec(CAT_PROC_DISKSTATS_CMD)
+	s, err := ps.Exec(CatProcDiskstatsCmd)
 	if err != nil {
 		return nil
 	}
@@ -158,20 +158,20 @@ func (ps *PSUtils) parseProcDiskStats() []ProcDiskStats {
 }
 
 func (ps *PSUtils) GetNotVirtualBlockDeviceNames() ([]string, error) {
-	if ps.STORAGE_DEVICE_NAMES != nil && len(ps.STORAGE_DEVICE_NAMES) > 0 {
-		return ps.STORAGE_DEVICE_NAMES, nil
+	if ps.StorageDeviceNames != nil && len(ps.StorageDeviceNames) > 0 {
+		return ps.StorageDeviceNames, nil
 	}
 	names, err := ps.getBlockDeviceNames()
 	if err != nil {
 		return nil, err
 	}
 	devs := FilterNonStorageDevice(names)
-	ps.STORAGE_DEVICE_NAMES = devs
+	ps.StorageDeviceNames = devs
 	return devs, nil
 }
 
 func (ps *PSUtils) getBlockDeviceNames() ([]string, error) {
-	s, err := ps.Exec(GET_BLOCKS_CMD)
+	s, err := ps.Exec(GetBlocksCmd)
 	if err != nil {
 		return nil, err
 	}
@@ -184,7 +184,7 @@ func FilterNonStorageDevice(s []string) []string {
 	var ret []string
 	for _, i := range s {
 		flag := true
-		for _, name := range OMIT_DISK_NAME_PREFIXES {
+		for _, name := range OmitDiskNamePrefixes {
 			if strings.HasPrefix(i, name) {
 				flag = false
 			}

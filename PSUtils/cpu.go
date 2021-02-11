@@ -9,8 +9,6 @@ import (
 	"sync"
 )
 
-var ()
-
 type CPUTimesStat struct {
 	CPU       string  `json:"cpu"`
 	User      float64 `json:"user"`

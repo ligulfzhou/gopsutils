@@ -20,14 +20,14 @@ type PSUtils struct {
 	platform string
 
 	// for network
-	NetworkInterface                 string
-	RX_LAST_TMSTAMP, TX_LAST_TMSTAMP int64
-	RX_LAST_TOTAL, TX_LAST_TOTAL     int64
+	NetworkInterface             string
+	RxLastTmstamp, TxLastTmstamp int64
+	RxLastTotal, TxLastTotal     int64
 
 	// disk
-	STORAGE_DEVICE_NAMES  []string
-	PROC_DISKSTAT_TMSTAMP int64
-	LastDiskStat          ProcDiskStats
+	StorageDeviceNames  []string
+	ProcDiskstatTmstamp int64
+	LastDiskStat        ProcDiskStats
 
 	// virtualization
 	VirtualizationSystem, VirtualizationRole string
@@ -36,7 +36,7 @@ type PSUtils struct {
 	HostId string
 
 	// kernel version, useful for calc disk stat
-	KERNEL_VERSION string
+	KernelVersion string
 
 	client *ssh.Client
 }
@@ -112,7 +112,3 @@ func (ps *PSUtils) Connect() (bool, error) {
 	ps.client = client
 	return true, nil
 }
-
-// func (ps *PSUtils) checkConn() {
-// 	select {}
-// }
