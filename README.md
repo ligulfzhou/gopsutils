@@ -1,5 +1,5 @@
 # preface
-This repo heavily copies code from [shirou/gopsutil](https://github.com/shirou/gopsutil). It is an awesome project. But it is not for mobile. So I rerange the code to fit for mobile usage. BTW, I only adopt for linux server, other platforms have been omitted now. (Maybe some time later, I will add them. But it is a high probability event.)
+This repo heavily copies code from [shirou/gopsutil](https://github.com/shirou/gopsutil). It is an awesome project. But it is not for mobile. So I rerange the code to fit for mobile usage. BTW, I only adopt for linux server, other platforms have been omitted now. (Maybe some time later, I will add them. But it is not a high probability event.)
 
 # gopsutils-for-mobile
 gopsutils is written for mobile, use gomobile to build framework for iOS and Android.
